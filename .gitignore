@@ -1,0 +1,9 @@
+__pycache__/
+.mypy_cache/
+.vscode/
+configs/*
+datasets/*/*
+saved/*
+tensorboards/*/*
+upload.sh
+download.sh
