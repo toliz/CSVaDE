@@ -7,3 +7,4 @@ saved/*
 tensorboards/*/*
 upload.sh
 download.sh
+.DS_Store
