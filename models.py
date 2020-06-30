@@ -69,9 +69,8 @@ class Classifier(nn.Module):
 
 class CSVaDE(nn.Module):
     def __init__(self, name, cnn_dim, att_dim, embeddings_dim, num_classes,
-                 cnn_encoder_hidden_layers=[1560], cnn_decoder_hidden_layers=[1660],
-                 att_encoder_hidden_layers=[1450], att_decoder_hidden_layers=[665],
-                 device='cpu', load_pretrained=False, reset_classifier=True):
+                 cnn_hidden_layers=[1000], att_hidden_layers=[1000],
+                 device='cpu', load_pretrained=True, reset_classifier=False):
         super(CSVaDE, self).__init__()
 
         self.name   = name
@@ -80,10 +79,10 @@ class CSVaDE(nn.Module):
         self.mu     = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
         self.logvar = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
         
-        self.cnn_encoder = Encoder([cnn_dim,        *cnn_encoder_hidden_layers, embeddings_dim], device)
-        self.cnn_decoder = Decoder([embeddings_dim, *cnn_decoder_hidden_layers, cnn_dim       ], device)
-        self.att_encoder = Encoder([att_dim,        *att_encoder_hidden_layers, embeddings_dim], device)
-        self.att_decoder = Decoder([embeddings_dim, *att_decoder_hidden_layers, att_dim       ], device)
+        self.cnn_encoder = Encoder([cnn_dim,        *cnn_hidden_layers, embeddings_dim], device)
+        self.cnn_decoder = Decoder([embeddings_dim, *cnn_hidden_layers, cnn_dim       ], device)
+        self.att_encoder = Encoder([att_dim,        *att_hidden_layers, embeddings_dim], device)
+        self.att_decoder = Decoder([embeddings_dim, *att_hidden_layers, att_dim       ], device)
         
         self.classifier  = Classifier(embeddings_dim, num_classes, device)
 
