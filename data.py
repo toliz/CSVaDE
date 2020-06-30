@@ -10,7 +10,7 @@ class DatasetGZSL(Dataset):
     Class for the loading of ZSL Datasets.
     """
 
-    def __init__(self, dataset='AWA2', device='cpu'):
+    def __init__(self, dataset='AWA2', device='cpu', purpose='test'):
         data = torch.load('datasets/' + dataset + '/data.pt')
         info = torch.load('datasets/' + dataset + '/info.pt')
         idx  = torch.load('datasets/' + dataset + '/splits.pt')
@@ -33,6 +33,12 @@ class DatasetGZSL(Dataset):
         self.val_idx         = idx['val'].astype(int)
         self.test_seen_idx   = idx['test_seen'].astype(int)
         self.test_unseen_idx = idx['test_unseen'].astype(int)
+
+        # Change splits for validation
+        if purpose == 'validate':
+            self.test_unseen_idx = self.val_idx
+            self.trainval_idx, self.test_seen_idx = train_test_split(self.train_idx, train_size=0.8)
+            self.train_idx = self.val_idx = None
 
         self.seen_classes   = np.unique(self.labels[self.test_seen_idx].to('cpu'))
         self.unseen_classes = np.unique(self.labels[self.test_unseen_idx].to('cpu'))
