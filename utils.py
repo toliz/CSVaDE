@@ -116,3 +116,99 @@ def top_k_accuracy(pred, true):
         total[t] += 1
 
     return 100 * np.average(np.array(list(accuracies.values())) / np.array(list(total.values())))
+
+
+def get_model_name(config):
+    name = config['general']['dataset']
+
+    # General
+    if config['general']['num_shots'] > 0:
+        name += '_{}-shots'.format(config['general']['num_shots'])
+
+    # Architecture
+    if config['architecture']['embeddings_dim'] != 64:
+        name += '_d=' + str(config['architecture']['embeddings_dim'])
+    if config['architecture']['cnn_hidden_layers'] != [1560]:
+        name += '_cnn_hidden=' + str(config['architecture']['cnn_hidden_layers'])
+    if config['architecture']['att_hidden_layers'] != [1450]:
+        name += '_att_hidden=' + str(config['architecture']['att_hidden_layers'])
+
+    # Classifier
+    if config['classifier']['num_seen'] != 200:
+        name += '_num_seen=' + str(config['classifier']['num_seen'])
+    if config['classifier']['num_unseen'] != 400:
+        name += '_num_unseen=' + str(config['classifier']['num_unseen'])
+
+    return name
+
+
+def _unroll_dict(d):
+    """
+    Helper function for create configs.
+
+    If a parameter is a dictionary form, it searches recurrsively for list in the dictionary values.
+    """
+    unrolled = [dict.fromkeys(d)]
+
+    for (param, value) in d.items():
+        if type(value) is dict:
+            value = _unroll_dict(value)
+        
+        if type(value) is list:
+            new_unrolled = []
+
+            for v in value:
+                for existing in unrolled:
+                    existing_ = deepcopy(existing)
+                    existing_[param] = eval(v) if (type(v) is str and v.startswith('[')) else v
+                    new_unrolled.append(existing_)
+
+            unrolled = new_unrolled
+        
+        else:
+            for i in range(len(unrolled)):
+                unrolled[i][param] = eval(value) if (type(value) is str and value.startswith('[')) else value
+
+    
+    return unrolled
+
+
+def create_configs(filename):
+    """
+    Loads a JSON file containing one or multiple configurations and returns a list with all the possible configurations.
+    If the JSON file contains a single configuration, it returns a list with a single element: this configuration.
+
+    The functon searches for lists in the parameters and for each one it replicates the current configuration as many
+    times as the elements of the list; then appends each configuration with the corresponding parameter. This procedure 
+    continues recurrsively till all possible conbinations are reached at the end of the JSON file.
+
+    If you wish to parse a list as a single parameter then quote it (e.g. lr = "[1e-3, 2e-3]")
+    """
+    with open(filename) as file:
+        initial = json.load(file)
+
+    configs = [{'general': {}, 'architecture': {}, 'embeddings': {}, 'classifier': {}}]
+
+    for part in ['general', 'architecture', 'embeddings', 'classifier']:
+        for (param, value) in initial[part].items():
+            # Unrolls dicts with lists in their values
+            if type(value) is dict:
+                value = _unroll_dict(value)
+
+            # Test multiple value for the parameter
+            if type(value) is list:
+                new_configs = []
+                
+                for v in value:
+                    for config in configs:
+                        config_ = deepcopy(config)
+                        config_[part][param] = eval(v) if (type(v) is str and v.startswith('[')) else v
+                        new_configs.append(config_)
+
+                configs = new_configs
+            # Test single v for the parameter
+            else:
+                for i in range(len(configs)):
+                    configs[i][part][param] = eval(value) if (type(value) is str and value.startswith('[')) else value
+
+    return configs
