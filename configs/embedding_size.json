@@ -1,0 +1,28 @@
+{
+    "general":
+    {
+        "dataset": "AWA2",
+        "num_shots": 0
+    },
+
+    "architecture": {
+        "embeddings_dim": [10, 50, 100, 150, 200, 250, 300],
+        "cnn_hidden_layers": "[1560]",
+        "att_hidden_layers": "[1450]"
+    },
+
+    "embeddings":
+    {
+        "num_epochs": 100,
+        "batch_size": 50
+    },
+
+    "classifier": {
+        "num_epochs": 100,
+        "batch_size": 100,
+        "num_seen":   200,
+        "num_unseen": 400,
+        "early_stop": 4,
+        "top_k_acc":  1
+    }
+}
