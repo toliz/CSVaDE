@@ -3,15 +3,10 @@ import time
 import torch
 import shutil
 
-from torch import nn, optim
-from models import CSVaDE
-
-from data import DatasetGZSL
-from torch.utils.data import Subset, DataLoader
-
 from utils import *
+from data import EmbeddingsDataset
+from torch.utils.data import Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from argparse import ArgumentParser
 
 
 def batch_loss(model, cnn, att, labels, reconstruction_loss_function):
@@ -42,9 +37,9 @@ def train_embeddings(model,
                      verbose=True,
                      tensorboard_dir='tensorboards/models/'):    
     # Sanity Check
-    start_epoch = len(model.embeddings_history) + 1
+    start_epoch = len(model.embeddings_history)+1
 
-    if start_epoch == num_epochs:
+    if start_epoch > num_epochs:
         return
     else:
         if verbose:
@@ -68,12 +63,6 @@ def train_embeddings(model,
     # Set up dataloader for training
     trainset   = Subset(dataset, dataset.trainval_idx)
     dataloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-
-    # Train only Variational Autoencoders
-    for param in model.parameters():
-        param.requires_grad = True
-    for param in model.classifier.parameters():
-        param.requires_grad = False
 
     model.train() # Train mode
     for epoch in range(start_epoch, num_epochs+1):
@@ -142,6 +131,7 @@ def train_embeddings(model,
 
 
 def train_classifier(model,
+                     dataset,
                      optimizer,
                      loss_function,
                      num_epochs=100,
@@ -149,10 +139,12 @@ def train_classifier(model,
                      num_seen=200,
                      num_unseen=400,
                      early_stop=4,
-                     top_k_acc=1):
-    start_epoch = len(model.classifier_history) + 1
+                     top_k_acc=1,
+                     verbose=True,
+                     tensorboard_dir='tensorboards/models/'):
+    start_epoch = len(model.classifier_history[0]) + 1
 
-    if start_epoch == num_epochs:
+    if start_epoch > num_epochs:
         return
     else:
         if verbose:
@@ -168,9 +160,12 @@ def train_classifier(model,
             # Remove old classifier files
             for file in os.listdir(tensorboard_dir + model.name):
                 if file.endswith('.classifier'):
-                    os.remvoe(file)
+                    os.remove(tensorboard_dir + model.name + '/' + file)
 
         writer = SummaryWriter(tensorboard_dir + model.name, filename_suffix='.classifier')
+
+    embeddingset = EmbeddingsDataset(dataset, model, num_seen, num_unseen)
+    trainloader = DataLoader(embeddingset, batch_size=batch_size, shuffle=True)
 
     for epoch in range(start_epoch, num_epochs+1):
         epoch_loss = 0.0
@@ -187,7 +182,7 @@ def train_classifier(model,
             pred = model.classifier(z)
             loss = loss_function(pred, labels.long())
 
-            # Backward pass
+            # Backward
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -196,10 +191,10 @@ def train_classifier(model,
 
             # Update
             epoch_loss += loss.item()
-            if model.verbose:
+            if verbose:
                 print_progress(i_batch, len(trainloader), end-start, loss.item())
 
-        model.clf_history[0] = np.append(model.clf_history[0], epoch_loss / len(trainloader))
+        model.classifier_history[0] = np.append(model.classifier_history[0], epoch_loss / len(trainloader))
 
         # Test
         model.eval()
@@ -226,18 +221,18 @@ def train_classifier(model,
         # Create tensorboard
         if tensorboard_dir != None:
             losses = {'Classifier Loss': epoch_loss, 'S': seen_acc, 'U': unseen_acc, 'H': acc}
-            add_to_tensorboard(writer, model, epoch, losses)
+            inspect_epoch(writer, model, epoch, losses)
 
         # Update history & save checkpoint iff current epoch is the best
-        model.clf_history[1] = np.append(model.clf_history[1], seen_acc)
-        model.clf_history[2] = np.append(model.clf_history[2], unseen_acc)
-        model.clf_history[3] = np.append(model.clf_history[3], acc)
+        model.classifier_history[1] = np.append(model.classifier_history[1], seen_acc)
+        model.classifier_history[2] = np.append(model.classifier_history[2], unseen_acc)
+        model.classifier_history[3] = np.append(model.classifier_history[3], acc)
 
-        if len(model.clf_history[3]) == 1 or acc > max(model.clf_history[3][:-1]):
+        if len(model.classifier_history[3]) == 1 or acc > max(model.classifier_history[3][:-1]):
             checkpoint = {
                 'name': model.name,
-                'vae_history': model.vae_history,
-                'clf_history': model.clf_history,
+                'embeddings_history': model.embeddings_history,
+                'classifier_history': model.classifier_history,
                 'state_dict': model.state_dict()
             }
 
@@ -245,63 +240,9 @@ def train_classifier(model,
 
         # Early Stop
         if early_stop != None:
-            if len(model.clf_history[3]) > 20 and acc <= min(model.clf_history[3][-early_stop-1:-1]):
-                if model.verbose:
+            if len(model.classifier_history[3]) > early_stop+1 and acc <= min(model.classifier_history[3][-early_stop-1:-1]):
+                if verbose:
                     print('Stopped at epoch {} because H-accuracy stopped improving\n'.format(epoch))
-                return np.max(model.clf_history[3])
+                return np.max(model.classifier_history[3])
     
-    return np.max(model.clf_history[3])
-
-
-def main(opt):
-    # Init model
-    dataset = DatasetGZSL(opt.dataset, opt.device)
-    
-    if opt.num_shots > 0:
-        dataset.transfer_features(opt.num_shots)
-
-    model = CSVaDE(opt.name,
-                   device = opt.device,
-                   cnn_dim = dataset.cnn_dim,
-                   att_dim = dataset.att_dim,
-                   embeddings_dim = 64,
-                   num_classes = len(dataset.classes),
-                   load_pretrained = opt.load_pretrained,
-                   reset_classifier = opt.reset_classifier)
-
-    # Train embeddings
-    optimizer = optim.Adam(model.parameters(), lr=1e-4, amsgrad=True)
-
-    criterion = {
-        'function': nn.L1Loss(reduction='sum'),
-
-        'coefficients': {
-            'beta':  {'start': 1,  'stop': 10, 'value': 1},
-        }
-    }
-
-    train_embeddings(model, dataset, optimizer, criterion)
-
-    # Train classifier
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
-    
-    train_classifier(model, optimizer, nn.NLLLoss(), top_k_acc=k)
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser(description='Trains the CSVaDE model.')
-
-    parser.add_argument('name')
-
-    parser.add_argument('--dataset', '-d', default='AWA1')
-    parser.add_argument('--num-shots', '-n', type=int, default=0)
-
-    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--load-pretrained', action='store_true')
-    parser.add_argument('--reset-classifier', action='store_true')
-
-    parser.add_argument('--top-k-acc', '-k', type=int, default=1)
-
-    opt = parser.parse_args()
-
-    main(opt)
+    return np.max(model.classifier_history[3])
