@@ -16,8 +16,8 @@ def main(opt):
         for (i, config) in enumerate(configs, start=1):
             # Options
             model_name = get_model_name(config)
-            dataset = DatasetGZSL(config['general']['dataset'], opt.device)
-            tensorboard_dir = 'tensorboards/experiments' + opt.name.split('/')[-1].split('.')[0]
+            dataset = DatasetGZSL(config['general']['dataset'], opt.device, purpose='validate')
+            tensorboard_dir = 'tensorboards/experiments/' + opt.name.split('/')[-1].split('.')[0]
 
             if config['general']['num_shots'] > 0:
                 dataset.transfer_features(config['general']['num_shots'])
@@ -38,7 +38,7 @@ def main(opt):
             for param in model.classifier.parameters():
                 param.requires_grad = False
 
-            optimizer = optim.Adam(model.parameters())
+            optimizer = optim.Adam(model.parameters(), lr=0.00015, amsgrad=True)
 
             criterion = {
                 'function': nn.L1Loss(reduction='sum'),
@@ -55,10 +55,10 @@ def main(opt):
             for param in model.parameters():
                 param.requires_grad = not param.requires_grad
 
-            optimizer = optim.Adam(model.parameters())
+            optimizer = optim.Adam(model.parameters(), betas=[0.5, 0.999])
         
             acc = train_classifier(model, dataset, optimizer, nn.NLLLoss(), **config['classifier'],
-                                   verbose=False, tensorboard_dir=tensoboard_dir)
+                                   verbose=False, tensorboard_dir=tensorboard_dir)
 
             print('\tH-acc = {:.2f}\n'.format(acc))
     else:
