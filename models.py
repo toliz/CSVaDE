@@ -69,7 +69,7 @@ class Classifier(nn.Module):
 
 class CSVaDE(nn.Module):
     def __init__(self, name, cnn_dim, att_dim, num_classes,
-                 embeddings_dim=200, nn_hidden_layers=[2000], att_hidden_layers=[2000],
+                 embeddings_dim=200, cnn_hidden_layers=[2000], att_hidden_layers=[2000],
                  device='cpu', load_pretrained=True, reset_classifier=False):
         super(CSVaDE, self).__init__()
 
