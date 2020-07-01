@@ -3,6 +3,7 @@ import numpy as np
 
 from torch.utils.data import Dataset
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 
 
 class DatasetGZSL(Dataset):
