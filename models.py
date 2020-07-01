@@ -102,7 +102,7 @@ class CSVaDE(nn.Module):
             print('Path \'{}\' for pretrained self doesn\'t exist!'.format(path))
             return
         
-        print('Loading pretrained self from: {}\n'.format(path))
+        print('Loading pretrained model from: {}\n'.format(path))
         
         checkpoint = torch.load(path, map_location=self.device)
         
