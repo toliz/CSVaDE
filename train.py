@@ -5,6 +5,7 @@ import shutil
 
 from utils import *
 from data import EmbeddingsDataset
+from sklearn.svm import SVC
 from torch.utils.data import Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -246,3 +247,35 @@ def train_classifier(model,
                 return np.max(model.classifier_history[3])
     
     return np.max(model.classifier_history[3])
+
+def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, num_unseen=400, top_k_acc=1, verbose=True):
+    if verbose:
+        print("\033[1mTraining SVM\033[0m\n")
+    else:
+        print('\tTraining Classifier for model: ' + model.name)
+    # Create dataset
+    embeddingset = EmbeddingsDataset(dataset, model, num_seen, num_unseen)
+    trainloader = DataLoader(embeddingset, batch_size, shuffle=True)
+
+    # Train SVM
+    classifier = SVC(C=C, gamma=gamma)
+    classifier.fit(embeddingset.embeddings.cpu().detach().numpy(), embeddingset.labels.cpu().detach().numpy())
+
+    # Calculate seen accuracy
+    features, _, labels = dataset[dataset.test_seen_idx]
+    #_, pred = torch.topk(torch.tensor(classifier.predict(model.cnn_encoder(features)[1].cpu().detach())), top_k_acc, dim=1)
+    #seen_acc = top_k_accuracy(pred, labels)
+    seen_acc = 100*classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
+
+    # Calculate unseen accuracy
+    features, _, labels = dataset[dataset.test_unseen_idx]
+    #_, pred = torch.topk(torch.tensor(classifier.predict(model.cnn_encoder(features)[1].cpu().detach())), top_k_acc, dim=1)
+    #unseen_acc = top_k_accuracy(pred, labels)
+    unseen_acc = 100*classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
+
+    if seen_acc == 0 or unseen_acc == 0:
+        acc = 0
+    else:
+        acc = 2*seen_acc*unseen_acc / (seen_acc + unseen_acc)
+
+    return seen_acc, unseen_acc, acc
