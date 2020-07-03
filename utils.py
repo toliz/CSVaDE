@@ -118,6 +118,13 @@ def top_k_accuracy(pred, true):
     return 100 * np.average(np.array(list(accuracies.values())) / np.array(list(total.values())))
 
 
+def str_to_class(classname):
+    """
+    Converts a string to a python class
+    """
+    return getattr(sys.modules[__name__], classname)
+
+
 def get_model_name(config):
     name = config['general']['dataset']
 
