@@ -35,11 +35,15 @@ class DatasetGZSL(Dataset):
         self.test_seen_idx   = idx['test_seen'].astype(int)
         self.test_unseen_idx = idx['test_unseen'].astype(int)
 
-        # Change splits for validation
+        # Unofficial splits for the purpose of validation
         if purpose == 'validate':
+            if 'train_80' not in idx or 'train_20' not in idx:
+                idx['train_80'], idx['train_20'] = train_test_split(self.train_idx, train_size=0.8)
+                torch.save(idx, 'datasets/' + dataset + '/splits.pt')
+            
+            self.trainval_idx  = idx['train_80']
+            self.test_seen_idx = idx['train_20']
             self.test_unseen_idx = self.val_idx
-            self.trainval_idx, self.test_seen_idx = train_test_split(self.train_idx, train_size=0.8)
-            self.train_idx = self.val_idx = None
 
         self.seen_classes   = np.unique(self.labels[self.test_seen_idx].to('cpu'))
         self.unseen_classes = np.unique(self.labels[self.test_unseen_idx].to('cpu'))
