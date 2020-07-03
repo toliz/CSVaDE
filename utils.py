@@ -126,12 +126,21 @@ def get_model_name(config):
         name += '_{}-shots'.format(config['general']['num_shots'])
 
     # Architecture
-    if config['architecture']['embeddings_dim'] != 64:
+    if config['architecture']['embeddings_dim'] != 200:
         name += '_d=' + str(config['architecture']['embeddings_dim'])
-    if config['architecture']['cnn_hidden_layers'] != [1560]:
+    if config['architecture']['cnn_hidden_layers'] != [2000]:
         name += '_cnn_hidden=' + str(config['architecture']['cnn_hidden_layers'])
-    if config['architecture']['att_hidden_layers'] != [1450]:
+    if config['architecture']['att_hidden_layers'] != [2000]:
         name += '_att_hidden=' + str(config['architecture']['att_hidden_layers'])
+
+    # Embeddings
+    if 'optimizer' in config['embeddings']:
+        if config['embeddings']['optimizer']['name'] != 'Adam':
+            name += '_optim=' + config['embeddings']['optimizer']['name']
+        else:
+            name += '_lr=' + str(config['embeddings']['optimizer']['settings']['lr'])
+            if config['embeddings']['optimizer']['settings']['amsgrad'] == True:
+                name += '_amsgrad'
 
     # Classifier
     if config['classifier']['num_seen'] != 200:
