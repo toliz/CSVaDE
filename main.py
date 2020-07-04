@@ -3,16 +3,17 @@ from torch import nn, optim
 
 from models import CSVaDE
 from data import DatasetGZSL
-from train import train_embeddings, train_classifier
+from train import *
 
 from utils import *
 from argparse import ArgumentParser
+
 
 def main(opt):
     if opt.name.endswith('.json'):
         # Run from config file
         configs = create_configs(opt.name)
-        
+
         for (i, config) in enumerate(configs, start=1):
             # Options
             model_name = get_model_name(config)
@@ -24,9 +25,9 @@ def main(opt):
 
             # Init model
             model = CSVaDE(model_name,
-                           cnn_dim = dataset.cnn_dim,
-                           att_dim = dataset.att_dim,
-                           num_classes = len(dataset.classes),
+                           cnn_dim=dataset.cnn_dim,
+                           att_dim=dataset.att_dim,
+                           num_classes=len(dataset.classes),
                            device=opt.device,
                            load_pretrained=opt.load_pretrained,
                            reset_classifier=opt.reset_classifier,
@@ -38,7 +39,13 @@ def main(opt):
             for param in model.classifier.parameters():
                 param.requires_grad = False
 
-            optimizer = optim.Adam(model.parameters(), lr=0.00015, amsgrad=True)
+            if 'optimizer' not in config['embeddings']:
+                optimizer = optim.Adam(model.parameters(), lr=0.0001)
+            else:
+                name = config['embeddings']['optimizer']['name']
+                settings = config['embeddings']['optimizer']['settings']
+                optimizer = str_to_class(name)(model.parameters(), **settings)
+                del config['embeddings']['optimizer']
 
             criterion = {
                 'function': nn.L1Loss(reduction='sum'),
@@ -48,40 +55,44 @@ def main(opt):
                 }
             }
 
-            train_embeddings(model, dataset, optimizer, criterion, **config['embeddings'],
-                             verbose=False, tensorboard_dir=tensorboard_dir)
+            hist = train_embeddings(model, dataset, optimizer, criterion, **config['embeddings'],
+                                    verbose=False, tensorboard_dir=tensorboard_dir)
+            print('\tLoss = {:.2f}'.format(hist[-1]))
 
             # Train classifier
             for param in model.parameters():
                 param.requires_grad = not param.requires_grad
 
             optimizer = optim.Adam(model.parameters(), betas=[0.5, 0.999])
-        
+
             acc = train_classifier(model, dataset, optimizer, nn.NLLLoss(), **config['classifier'],
                                    verbose=False, tensorboard_dir=tensorboard_dir)
 
-            print('\tH-acc = {:.2f}\n'.format(acc))
+            print('\tH-acc = {:.2f}'.format(acc))
+
+            # Train SVM
+            s, u, h = train_svm(model, dataset, verbose=False)
+            print('\tH-acc = {:.2f}\n'.format(h))
     else:
         # Run with terminal arguments
         dataset = DatasetGZSL(opt.dataset, opt.device)
-        
+
         if opt.num_shots > 0:
             dataset.transfer_features(opt.num_shots)
 
         model = CSVaDE(opt.name,
-                    device = opt.device,
-                    cnn_dim = dataset.cnn_dim,
-                    att_dim = dataset.att_dim,
-                    embeddings_dim = 200,
-                    num_classes = len(dataset.classes),
-                    load_pretrained = opt.load_pretrained,
-                    reset_classifier = opt.reset_classifier)
+                       cnn_dim=dataset.cnn_dim,
+                       att_dim=dataset.att_dim,
+                       num_classes=len(dataset.classes),
+                       device=opt.device,
+                       load_pretrained=opt.load_pretrained,
+                       reset_classifier=opt.reset_classifier)
 
         # Train embeddings
         for param in model.classifier.parameters():
             param.requires_grad = False
 
-        optimizer = optim.Adam(model.parameters())
+        optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
         criterion = {
             'function': nn.L1Loss(reduction='sum'),
@@ -94,12 +105,15 @@ def main(opt):
         train_embeddings(model, dataset, optimizer, criterion)
 
         # Train classifier
-        for param in model.parameters():
-            param.requires_grad = not param.requires_grad
+        if opt.classifier == 'softmax':
+            for param in model.parameters():
+                param.requires_grad = not param.requires_grad
 
-        optimizer = optim.Adam(model.parameters())
-        
-        train_classifier(model, dataset, optimizer, nn.NLLLoss(), top_k_acc=opt.top_k_acc)
+            optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=[0.5, 0.999])
+
+            train_classifier(model, dataset, optimizer, nn.NLLLoss(), top_k_acc=opt.top_k_acc)
+        else:
+            train_svm(model, dataset)
 
 
 if __name__ == '__main__':
@@ -114,6 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--load-pretrained', action='store_true')
     parser.add_argument('--reset-classifier', action='store_true')
 
+    parser.add_argument('--classifier', '-c', default='svm')
     parser.add_argument('--top-k-acc', '-k', type=int, default=1)
 
     opt = parser.parse_args()
