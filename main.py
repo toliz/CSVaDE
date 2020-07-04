@@ -71,8 +71,8 @@ def main(opt):
             print('\tH-acc = {:.2f}'.format(acc))
 
             # Train SVM
-            s, u, h = train_svm(model, dataset, verbose=False)
-            print('\tH-acc = {:.2f}\n'.format(h))
+            acc = train_svm(model, dataset, verbose=False)
+            print('\tH-acc = {:.2f}\n'.format(acc))
     else:
         # Run with terminal arguments
         dataset = DatasetGZSL(opt.dataset, opt.device)
