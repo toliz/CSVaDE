@@ -96,8 +96,9 @@ def train_embeddings(model,
             epoch_loss += np.array([loss.item(), RL.item(), KLD.item()])
             epoch_time += end-start
 
-            if i_batch < len(dataloader) and verbose:
-                print_progress(i_batch, len(dataloader), end-start, loss.item() / labels.shape[0])
+            if i_batch < len(dataloader):
+                if verbose:
+                    print_progress(i_batch, len(dataloader), end-start, loss.item() / labels.shape[0])
             else:
                 epoch_loss /= len(trainset)
                 epoch_time /= len(dataloader)
@@ -129,6 +130,7 @@ def train_embeddings(model,
         add_embeddings(tensorboard_dir, model, dataset)
 
     model.eval()
+    return model.embeddings_history
 
 
 def train_classifier(model,
