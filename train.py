@@ -257,23 +257,32 @@ def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, n
         print('\tTraining SVM Classifier for model: ' + model.name)
     # Create dataset
     embeddingset = EmbeddingsDataset(dataset, model, num_seen, num_unseen)
-    trainloader = DataLoader(embeddingset, batch_size, shuffle=True)
 
     # Train SVM
-    classifier = SVC(C=C, gamma=gamma)
+    if top_k_acc > 1:
+        classifier = SVC(C=C, gamma=gamma, probability=True)
+    else:
+        classifier = SVC(C=C, gamma=gamma)
     classifier.fit(embeddingset.embeddings.cpu().detach().numpy(), embeddingset.labels.cpu().detach().numpy())
 
     # Calculate seen accuracy
     features, _, labels = dataset[dataset.test_seen_idx]
-    #_, pred = torch.topk(torch.tensor(classifier.predict(model.cnn_encoder(features)[1].cpu().detach())), top_k_acc, dim=1)
-    #seen_acc = top_k_accuracy(pred, labels)
-    seen_acc = 100*classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
+    if top_k_acc > 1:
+        probs = classifier.predict_proba(model.cnn_encoder(features)[1].cpu().detach().numpy())
+        pred = np.argsort(probs, axis=1)[:, -top_k_acc:].tolist()
+        seen_acc = top_k_accuracy(pred, labels)
+    else:
+        seen_acc = 100 * classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
 
     # Calculate unseen accuracy
     features, _, labels = dataset[dataset.test_unseen_idx]
-    #_, pred = torch.topk(torch.tensor(classifier.predict(model.cnn_encoder(features)[1].cpu().detach())), top_k_acc, dim=1)
-    #unseen_acc = top_k_accuracy(pred, labels)
-    unseen_acc = 100*classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
+    features, _, labels = dataset[dataset.test_seen_idx]
+    if top_k_acc > 1:
+        probs = classifier.predict_proba(model.cnn_encoder(features)[1].cpu().detach().numpy())
+        pred = np.argsort(probs, axis=1)[:, -top_k_acc:].tolist()
+        unseen_acc = top_k_accuracy(pred, labels)
+    else:
+        unseen_acc = 100 * classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
 
     if seen_acc == 0 or unseen_acc == 0:
         acc = 0
