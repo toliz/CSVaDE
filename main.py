@@ -63,7 +63,7 @@ def main(opt):
             for param in model.parameters():
                 param.requires_grad = not param.requires_grad
 
-            optimizer = optim.Adam(model.parameters(), betas=[0.5, 0.999])
+            optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=[0.5, 0.999])
 
             acc = train_classifier(model, dataset, optimizer, nn.NLLLoss(), **config['classifier'],
                                    verbose=False, tensorboard_dir=tensorboard_dir)
