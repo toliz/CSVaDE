@@ -113,7 +113,7 @@ def main(opt):
 
             train_classifier(model, dataset, optimizer, nn.NLLLoss(), top_k_acc=opt.top_k_acc)
         else:
-            train_svm(model, dataset)
+            train_svm(model, dataset, top_k_acc=opt.top_k_acc)
 
 
 if __name__ == '__main__':

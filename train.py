@@ -276,7 +276,6 @@ def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, n
 
     # Calculate unseen accuracy
     features, _, labels = dataset[dataset.test_unseen_idx]
-    features, _, labels = dataset[dataset.test_seen_idx]
     if top_k_acc > 1:
         probs = classifier.predict_proba(model.cnn_encoder(features)[1].cpu().detach().numpy())
         pred = np.argsort(probs, axis=1)[:, -top_k_acc:].tolist()
