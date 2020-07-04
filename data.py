@@ -67,9 +67,6 @@ class EmbeddingsDataset(Dataset):
     def __init__(self, dataset, model, num_seen, num_unseen):
         cuda = model.device.startswith('cuda')
 
-        seen_classes   = dataset.labels[dataset.trainval_idx].unique().tolist()
-        unseen_classes = dataset.labels[dataset.test_unseen_idx].unique().tolist()
-
         # Get seen embeddings from cnn features
         features, _, labels = dataset[dataset.trainval_idx]
         if cuda:
@@ -78,7 +75,7 @@ class EmbeddingsDataset(Dataset):
         z_cnns = []
         l_cnns = []
         
-        for c in seen_classes:
+        for c in dataset.seen_classes:
             idx = np.where(labels == c)[0]
             idx = np.random.choice(idx, num_seen, replace=True)
 
@@ -101,7 +98,7 @@ class EmbeddingsDataset(Dataset):
         z_atts = []
         l_atts = []
 
-        for c in unseen_classes:
+        for c in dataset.unseen_classes:
             idx = np.where(labels == c)[0]
             idx = np.random.choice(idx, num_unseen, replace=True)
 

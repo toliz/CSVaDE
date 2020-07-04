@@ -44,7 +44,7 @@ def train_embeddings(model,
         return
     else:
         if verbose:
-            print("\033[1mTraining VAE\033[0m\n")
+            print('\033[1mTraining VAE\033[0m\n')
         else:
             print('\tTraining VAE for model: ' + model.name)
 
@@ -151,9 +151,9 @@ def train_classifier(model,
         return
     else:
         if verbose:
-            print("\033[1mTraining Classifier\033[0m\n")
+            print('\033[1mTraining Softmax Classifier\033[0m\n')
         else:
-            print('\tTraining Classifier for model: ' + model.name)
+            print('\tTraining Softmax Classifier for model: ' + model.name)
 
     if tensorboard_dir != None:
         if tensorboard_dir[-1] != '/':
@@ -219,7 +219,7 @@ def train_classifier(model,
             acc = 2*seen_acc*unseen_acc / (seen_acc + unseen_acc)
 
         if verbose:
-            print("Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n".format(seen_acc, unseen_acc, acc))
+            print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
 
         # Create tensorboard
         if tensorboard_dir != None:
@@ -252,9 +252,9 @@ def train_classifier(model,
 
 def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, num_unseen=400, top_k_acc=1, verbose=True):
     if verbose:
-        print("\033[1mTraining SVM\033[0m\n")
+        print('\033[1mTraining SVM Classifier\033[0m\n')
     else:
-        print('\tTraining Classifier for model: ' + model.name)
+        print('\tTraining SVM Classifier for model: ' + model.name)
     # Create dataset
     embeddingset = EmbeddingsDataset(dataset, model, num_seen, num_unseen)
     trainloader = DataLoader(embeddingset, batch_size, shuffle=True)
@@ -280,4 +280,7 @@ def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, n
     else:
         acc = 2*seen_acc*unseen_acc / (seen_acc + unseen_acc)
 
-    return seen_acc, unseen_acc, acc
+    if verbose:
+        print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
+
+    return acc
