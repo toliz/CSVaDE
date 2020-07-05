@@ -71,7 +71,8 @@ def main(opt):
             print('\tH-acc = {:.2f}'.format(acc))
 
             # Train SVM
-            acc = train_svm(model, dataset, verbose=False)
+            acc = train_svm(model, dataset, batch_size=config['classifier']['batch_size'],
+                            top_k_acc=config['classifier']['top_k_acc'], verbose=False)
             print('\tH-acc = {:.2f}\n'.format(acc))
     else:
         # Run with terminal arguments
