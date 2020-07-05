@@ -6,7 +6,7 @@
     },
 
     "architecture": {
-        "embeddings_dim": 2000,
+        "embeddings_dim": 200,
         "cnn_hidden_layers": "[2000]",
         "att_hidden_layers": "[2000]"
     },
