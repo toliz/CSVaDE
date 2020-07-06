@@ -65,15 +65,10 @@ def main(opt):
 
             optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=[0.5, 0.999])
 
-            acc = train_classifier(model, dataset, optimizer, nn.NLLLoss(), **config['classifier'],
-                                   verbose=False, tensorboard_dir=tensorboard_dir)
-
-            print('\tH-acc = {:.2f}'.format(acc))
-
-            # Train SVM
-            acc = train_svm(model, dataset, batch_size=config['classifier']['batch_size'],
-                            top_k_acc=config['classifier']['top_k_acc'], verbose=False)
-            print('\tH-acc = {:.2f}\n'.format(acc))
+            s, u, h = train_classifier(model, dataset, optimizer, nn.NLLLoss(), **config['classifier'],
+                                       verbose=False, tensorboard_dir=tensorboard_dir)
+            
+            print('\tS = {:.2f}| U = {:.2f}| H = {:.2f}\n'.format(s, u, h))
     else:
         # Run with terminal arguments
         dataset = DatasetGZSL(opt.dataset, opt.device)
@@ -129,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('--load-pretrained', action='store_true')
     parser.add_argument('--reset-classifier', action='store_true')
 
-    parser.add_argument('--classifier', '-c', default='svm')
+    parser.add_argument('--classifier', '-c', default='softmax')
     parser.add_argument('--top-k-acc', '-k', type=int, default=1)
 
     opt = parser.parse_args()
