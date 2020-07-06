@@ -150,7 +150,7 @@ def get_model_name(config):
                 name += '_amsgrad'
 
     # Classifier
-    if config['classifier']['num_seen'] != 200:
+    if config['classifier']['num_seen'] != 100:
         name += '_num_seen=' + str(config['classifier']['num_seen'])
     if config['classifier']['num_unseen'] != 400:
         name += '_num_unseen=' + str(config['classifier']['num_unseen'])
