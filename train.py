@@ -246,9 +246,12 @@ def train_classifier(model,
             if len(model.classifier_history[3]) > early_stop+1 and acc <= min(model.classifier_history[3][-early_stop-1:-1]):
                 if verbose:
                     print('Stopped at epoch {} because H-accuracy stopped improving\n'.format(epoch))
-                return np.max(model.classifier_history[3])
+
+                idx = np.argmax(model.classifier_history[3])
+                return model.classifier_history[1][idx], model.classifier_history[2][idx], model.classifier_history[3][idx]
     
-    return np.max(model.classifier_history[3])
+    idx = np.argmax(model.classifier_history[3])
+    return model.classifier_history[1][idx], model.classifier_history[2][idx], model.classifier_history[3][idx]
 
 def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, num_unseen=400, top_k_acc=1, verbose=True):
     if verbose:
@@ -291,4 +294,4 @@ def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, n
     if verbose:
         print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
 
-    return acc
+    return seen_acc, unseen_acc, acc
