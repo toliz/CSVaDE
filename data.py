@@ -50,7 +50,7 @@ class DatasetGZSL(Dataset):
     
     def transfer_features(self, num_features):
         for c in self.unseen_classes:
-            idx = [i for (i, v) in enumerate(self.test_unseen_idx) if labels[v] == c]
+            idx = [i for (i, v) in enumerate(self.test_unseen_idx) if self.labels[v] == c]
             idx = np.random.choice(idx, num_features)
             
             self.trainval_idx    = np.insert(self.trainval_idx, -1, self.test_unseen_idx[idx])
