@@ -30,8 +30,8 @@
     "classifier": {
         "num_epochs": 100,
         "batch_size": 100,
-        "num_seen":   200,
-        "num_unseen": 400,
+        "num_seen":   100,
+        "num_unseen": 200,
         "early_stop": 4,
         "top_k_acc":  1
     }
