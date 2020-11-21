@@ -71,7 +71,7 @@ def main(opt):
             print('\tS = {:.2f}| U = {:.2f}| H = {:.2f}\n'.format(s, u, h))
     else:
         # Run with terminal arguments
-        dataset = DatasetGZSL(opt.dataset, opt.device)
+        dataset = DatasetGZSL(opt.dataset, opt.generalized, opt.device)
 
         if opt.num_shots > 0:
             dataset.transfer_features(opt.num_shots)
@@ -118,6 +118,7 @@ if __name__ == '__main__':
     parser.add_argument('name')
 
     parser.add_argument('--dataset', '-d', default='AWA2')
+    parser.add_argument('--generalized', type=str2bool, default=True)
     parser.add_argument('--num-shots', '-n', type=int, default=0)
 
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')

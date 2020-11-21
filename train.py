@@ -202,10 +202,13 @@ def train_classifier(model,
         # Test
         model.eval()
         with torch.no_grad():
-            # Forward pass for seen classes
-            features, _, labels = dataset[dataset.test_seen_idx]
-            _, pred = torch.topk(model.forward(features), top_k_acc, dim=1)
-            seen_acc = top_k_accuracy(pred, labels)
+            # Forward pass for seen classes (in GZSL mode)
+            if isinstance(dataset.test_seen_idx, np.ndarray):
+                features, _, labels = dataset[dataset.test_seen_idx]
+                _, pred = torch.topk(model.forward(features), top_k_acc, dim=1)
+                seen_acc = top_k_accuracy(pred, labels)
+            else:
+                seen_acc = np.nan
 
             # Forward pass for unseen classes
             features, _, labels = dataset[dataset.test_unseen_idx]
@@ -215,11 +218,16 @@ def train_classifier(model,
         # Calculate total accuracy
         if seen_acc == 0 or unseen_acc == 0:
             acc = 0
+        elif np.isnan(seen_acc):
+            acc = unseen_acc
         else:
             acc = 2*seen_acc*unseen_acc / (seen_acc + unseen_acc)
 
         if verbose:
-            print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
+            if np.isnan(seen_acc):  # ZSL
+                print('Test: \033[1mU = {:.1f}\033[0m \n'.format(unseen_acc))
+            else:                   # GZSL
+                print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
 
         # Create tensorboard
         if tensorboard_dir != None:
@@ -269,14 +277,17 @@ def train_svm(model, dataset, C=300, gamma=1e-6, batch_size=100, num_seen=200, n
         classifier = SVC(C=C, gamma=gamma)
     classifier.fit(embeddingset.embeddings.cpu().detach().numpy(), embeddingset.labels.cpu().detach().numpy())
 
-    # Calculate seen accuracy
-    features, _, labels = dataset[dataset.test_seen_idx]
-    if top_k_acc > 1:
-        probs = classifier.predict_proba(model.cnn_encoder(features)[1].cpu().detach().numpy())
-        pred = np.argsort(probs, axis=1)[:, -top_k_acc:].tolist()
-        seen_acc = top_k_accuracy(pred, labels)
+    # Calculate seen accuracy (in GZSL mode)
+    if isinstance(dataset.test_seen_idx, np.ndarray):
+        features, _, labels = dataset[dataset.test_seen_idx]
+        if top_k_acc > 1:
+            probs = classifier.predict_proba(model.cnn_encoder(features)[1].cpu().detach().numpy())
+            pred = np.argsort(probs, axis=1)[:, -top_k_acc:].tolist()
+            seen_acc = top_k_accuracy(pred, labels)
+        else:
+            seen_acc = 100 * classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
     else:
-        seen_acc = 100 * classifier.score(model.cnn_encoder(features)[1].cpu().detach().numpy(), labels.cpu().detach().numpy())
+        seen_acc = np.nan
 
     # Calculate unseen accuracy
     features, _, labels = dataset[dataset.test_unseen_idx]
@@ -289,10 +300,15 @@ def train_svm(model, dataset, C=300, gamma=1e-6, batch_size=100, num_seen=200, n
 
     if seen_acc == 0 or unseen_acc == 0:
         acc = 0
+    elif np.isnan(seen_acc):
+        acc = unseen_acc
     else:
         acc = 2*seen_acc*unseen_acc / (seen_acc + unseen_acc)
 
     if verbose:
-        print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
+        if np.isnan(seen_acc):  # ZSL
+            print('Test: \033[1mU = {:.1f}\033[0m \n'.format(unseen_acc))
+        else:                   # GZSL
+            print('Test: S = {:.1f}| U = {:.1f}| \033[1mH = {:.1f}\033[0m \n'.format(seen_acc, unseen_acc, acc))
 
     return seen_acc, unseen_acc, acc

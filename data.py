@@ -11,7 +11,7 @@ class DatasetGZSL(Dataset):
     Class for the loading of ZSL Datasets.
     """
 
-    def __init__(self, dataset='AWA2', device='cpu', purpose='test'):
+    def __init__(self, dataset='AWA2', generalized=False, device='cpu', purpose='test'):
         data = torch.load('datasets/' + dataset + '/data.pt')
         info = torch.load('datasets/' + dataset + '/info.pt')
         idx  = torch.load('datasets/' + dataset + '/splits.pt')
@@ -36,7 +36,7 @@ class DatasetGZSL(Dataset):
         self.test_unseen_idx = idx['test_unseen'].astype(int)
 
         # Unofficial splits for the purpose of validation
-        if purpose == 'validate':
+        if generalized == True and purpose == 'validate':
             if 'train_80' not in idx or 'train_20' not in idx:
                 idx['train_80'], idx['train_20'] = train_test_split(self.train_idx, train_size=0.8)
                 torch.save(idx, 'datasets/' + dataset + '/splits.pt')
@@ -44,8 +44,17 @@ class DatasetGZSL(Dataset):
             self.trainval_idx  = idx['train_80']
             self.test_seen_idx = idx['train_20']
             self.test_unseen_idx = self.val_idx
+        
+        if generalized == False and purpose == 'validate':
+            self.trainval_idx  = idx['train']
+            self.test_seen_idx = None
+            self.test_unseen_idx = self.val_idx
 
-        self.seen_classes   = np.unique(self.labels[self.test_seen_idx].to('cpu'))
+        if generalized == False and purpose == 'test':
+            self.trainval_idx  = np.concatenate([self.train_idx, self.val_idx])
+            self.test_seen_idx = None
+
+        self.seen_classes   = np.unique(self.labels[self.trainval_idx].to('cpu'))
         self.unseen_classes = np.unique(self.labels[self.test_unseen_idx].to('cpu'))
     
     def transfer_features(self, num_features):
