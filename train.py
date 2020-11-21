@@ -253,7 +253,8 @@ def train_classifier(model,
     idx = np.argmax(model.classifier_history[3])
     return model.classifier_history[1][idx], model.classifier_history[2][idx], model.classifier_history[3][idx]
 
-def train_svm(model, dataset, C=0.1, gamma=0.01, batch_size=100, num_seen=200, num_unseen=400, top_k_acc=1, verbose=True):
+
+def train_svm(model, dataset, C=300, gamma=1e-6, batch_size=100, num_seen=200, num_unseen=400, top_k_acc=1, verbose=True):
     if verbose:
         print('\033[1mTraining SVM Classifier\033[0m\n')
     else:
