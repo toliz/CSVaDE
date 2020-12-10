@@ -12,19 +12,15 @@ from torch.utils.tensorboard import SummaryWriter
 
 def batch_loss(model, cnn, att, labels, reconstruction_loss_function):
     z_cnn, mu_cnn, logvar_cnn = model.cnn_encoder(cnn)
-    z_att, mu_att, logvar_att = model.att_encoder(att)
-    
     cnn_recon = model.cnn_decoder(z_cnn)
-    att_recon = model.att_decoder(z_att)
 
-    mu     = model.mu[labels]
-    logvar = model.logvar[labels]
+    mu     = model.mu(att)
+    logvar = model.logvar(att)
 
     # VaDE Loss
-    reconstruction_loss = reconstruction_loss_function(cnn_recon, cnn) + reconstruction_loss_function(att_recon, att)
+    reconstruction_loss = reconstruction_loss_function(cnn_recon, cnn)
 
-    KLD = -0.5 * (torch.sum(1 + (logvar_cnn - logvar) - ((mu_cnn - mu).pow(2) + logvar_cnn.exp()) / logvar.exp()) + \
-                  torch.sum(1 + (logvar_att - logvar) - ((mu_att - mu).pow(2) + logvar_att.exp()) / logvar.exp()))
+    KLD = -0.5 * torch.sum(1 + (logvar_cnn - logvar) - ((mu_cnn - mu).pow(2) + logvar_cnn.exp()) / logvar.exp())
 
     return [reconstruction_loss, KLD]
 

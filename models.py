@@ -76,13 +76,11 @@ class CSVaDE(nn.Module):
         self.name   = name
         self.device = device
 
-        self.mu     = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
-        self.logvar = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
-        
         self.cnn_encoder = Encoder([cnn_dim,        *cnn_hidden_layers, embeddings_dim], device)
         self.cnn_decoder = Decoder([embeddings_dim, *cnn_hidden_layers, cnn_dim       ], device)
-        self.att_encoder = Encoder([att_dim,        *att_hidden_layers, embeddings_dim], device)
-        self.att_decoder = Decoder([embeddings_dim, *att_hidden_layers, att_dim       ], device)
+
+        self.mu     = nn.Sequential(nn.Linear(att_dim, embeddings_dim), nn.ReLU())
+        self.logvar = nn.Sequential(nn.Linear(att_dim, embeddings_dim), nn.ReLU())
         
         self.classifier  = Classifier(embeddings_dim, num_classes, device)
 
