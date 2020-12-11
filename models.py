@@ -81,6 +81,11 @@ class CSVaDE(nn.Module):
 
         self.mu     = nn.Sequential(nn.Linear(att_dim, embeddings_dim), nn.ReLU())
         self.logvar = nn.Sequential(nn.Linear(att_dim, embeddings_dim), nn.ReLU())
+
+        self.mu.to(device)
+        self.mu.apply(init_weights)
+        self.logvar.to(device)
+        self.logvar.apply(init_weights)
         
         self.classifier  = Classifier(embeddings_dim, num_classes, device)
 

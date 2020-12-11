@@ -114,7 +114,11 @@ class EmbeddingsDataset(Dataset):
             x_att = attributes[idx]
             l_att = labels[idx]
 
-            z_att, _, _ = model.att_encoder(x_att)
+            mu  = model.mu(x_att)
+            std = torch.exp(0.5 * model.logvar(x_att))
+            eps = torch.randn_like(std)
+
+            z_att = mu + eps*std
             
             z_atts.append(z_att)
             l_atts.append(l_att)

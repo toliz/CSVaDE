@@ -59,7 +59,7 @@ def add_embeddings(dir, model, dataset):
         idx = getattr(dataset, idx_type + '_idx')
         cnn, att, labels = dataset[np.random.choice(idx, 1000)]
 
-        datapoints = torch.cat([model.cnn_encoder(cnn)[1], model.att_encoder(att)[1]])
+        datapoints = torch.cat([model.cnn_encoder(cnn)[1], model.mu(att)])
         modalities = ['cnn'] * len(labels) + ['att'] * len(labels)
         labels     = [dataset.classes[label] for label in labels] * 2 # switch from integer to string labelling
 
