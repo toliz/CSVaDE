@@ -17,8 +17,7 @@ class DatasetGZSL(Dataset):
         idx  = torch.load('datasets/' + dataset + '/splits.pt')
 
         # Load data
-        self.features = MinMaxScaler().fit_transform(data['features'])
-        self.features = torch.from_numpy(self.features).float().to(device)
+        self.features = data['features'].numpy()
         self.labels   = data['labels'].long().to(device)
 
         # Load info
@@ -54,9 +53,18 @@ class DatasetGZSL(Dataset):
             self.trainval_idx  = np.concatenate([self.train_idx, self.val_idx])
             self.test_seen_idx = None
 
+        # Transform features
+        scaler = MinMaxScaler()
+
+        self.features[self.trainval_idx] = scaler.fit_transform(self.features[self.trainval_idx])
+        self.features[self.test_seen_idx] = scaler.transform(self.features[self.test_seen_idx])
+        self.features[self.test_unseen_idx] = scaler.transform(self.features[self.test_unseen_idx])
+
+        self.features = torch.tensor(self.features, device=device, dtype=torch.float)
+
         self.seen_classes   = np.unique(self.labels[self.trainval_idx].to('cpu'))
         self.unseen_classes = np.unique(self.labels[self.test_unseen_idx].to('cpu'))
-    
+
     def transfer_features(self, num_features):
         for c in self.unseen_classes:
             idx = [i for (i, v) in enumerate(self.test_unseen_idx) if self.labels[v] == c]
