@@ -28,8 +28,10 @@ class Encoder(nn.Module):
         logvar = self.logvar(self.encoder(x))
 
         # Reparametrize
-        std = torch.exp(0.5*logvar)
-        eps = torch.randn_like(std)
+        std = torch.exp(logvar) # TODO: 0.5*logvar
+        eps = torch.FloatTensor(logvar.size()[0],1).normal_(0,1).to('cuda')
+        eps  = eps.expand(std.size())
+        #eps = torch.randn_like(std) TODO: remove
 
         z = mu + eps*std
 
@@ -69,20 +71,20 @@ class Classifier(nn.Module):
 
 class CSVaDE(nn.Module):
     def __init__(self, name, cnn_dim, att_dim, num_classes,
-                 embeddings_dim=200, cnn_hidden_layers=[2000], att_hidden_layers=[2000],
+                 embeddings_dim=64, cnn_hidden_layers=[2000], att_hidden_layers=[2000],
                  device='cpu', load_pretrained=True, reset_classifier=False):
         super(CSVaDE, self).__init__()
 
         self.name   = name
         self.device = device
 
-        self.mu     = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
-        self.logvar = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
+        #self.mu     = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
+        #self.logvar = torch.nn.Parameter(torch.zeros(num_classes, embeddings_dim, device=device))
         
-        self.cnn_encoder = Encoder([cnn_dim,        *cnn_hidden_layers, embeddings_dim], device)
-        self.cnn_decoder = Decoder([embeddings_dim, *cnn_hidden_layers, cnn_dim       ], device)
-        self.att_encoder = Encoder([att_dim,        *att_hidden_layers, embeddings_dim], device)
-        self.att_decoder = Decoder([embeddings_dim, *att_hidden_layers, att_dim       ], device)
+        self.cnn_encoder = Encoder([cnn_dim,        1560, embeddings_dim], device)
+        self.cnn_decoder = Decoder([embeddings_dim, 1660, cnn_dim       ], device)
+        self.att_encoder = Encoder([att_dim,        1450, embeddings_dim], device)
+        self.att_decoder = Decoder([embeddings_dim, 665, att_dim       ], device)
         
         self.classifier  = Classifier(embeddings_dim, num_classes, device)
 

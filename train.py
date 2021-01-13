@@ -9,24 +9,33 @@ from sklearn.svm import SVC
 from torch.utils.data import Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-
 def batch_loss(model, cnn, att, labels, reconstruction_loss_function):
     z_cnn, mu_cnn, logvar_cnn = model.cnn_encoder(cnn)
     z_att, mu_att, logvar_att = model.att_encoder(att)
-    
-    cnn_recon = model.cnn_decoder(z_cnn)
-    att_recon = model.att_decoder(z_att)
 
-    mu     = model.mu[labels]
-    logvar = model.logvar[labels]
+    cnn_from_cnn = model.cnn_decoder(z_cnn)
+    att_from_att = model.att_decoder(z_att)
+
+    cnn_from_att = model.cnn_decoder(z_att)
+    att_from_cnn = model.att_decoder(z_cnn)
+
+    #mu     = model.mu[labels]
+    #logvar = model.logvar[labels]
 
     # VaDE Loss
-    reconstruction_loss = reconstruction_loss_function(cnn_recon, cnn) + reconstruction_loss_function(att_recon, att)
+    reconstruction_loss = reconstruction_loss_function(cnn_from_cnn, cnn) + reconstruction_loss_function(att_from_att, att)
 
-    KLD = -0.5 * (torch.sum(1 + (logvar_cnn - logvar) - ((mu_cnn - mu).pow(2) + logvar_cnn.exp()) / logvar.exp()) + \
-                  torch.sum(1 + (logvar_att - logvar) - ((mu_att - mu).pow(2) + logvar_att.exp()) / logvar.exp()))
+    #KLD = -0.5 * (torch.sum(1 + (logvar_cnn - logvar) - ((mu_cnn - mu).pow(2) + logvar_cnn.exp()) / logvar.exp()) + \
+    #              torch.sum(1 + (logvar_att - logvar) - ((mu_att - mu).pow(2) + logvar_att.exp()) / logvar.exp()))
+    KLD = -0.5 * (torch.sum(1 + logvar_att - mu_att.pow(2) - logvar_att.exp()) + \
+                  torch.sum(1 + logvar_cnn - mu_cnn.pow(2) - logvar_cnn.exp()))
 
-    return [reconstruction_loss, KLD]
+    CA = reconstruction_loss_function(cnn_from_att, cnn) + reconstruction_loss_function(att_from_cnn, att)
+
+    DA = torch.sqrt(torch.sum((mu_cnn - mu_att).pow(2), dim=1) + \
+                    torch.sum((torch.sqrt(logvar_cnn.exp()) - torch.sqrt(logvar_att.exp())) ** 2, dim=1)).sum()
+
+    return [reconstruction_loss, KLD, CA, DA]
 
 
 def train_embeddings(model,
@@ -59,7 +68,7 @@ def train_embeddings(model,
         writer = SummaryWriter(tensorboard_dir + model.name, filename_suffix='.embeddings')
 
     # Set up loss info
-    loss_names = ['VaDE Loss', 'Reconstruction Loss', 'KLD']
+    loss_names = ['Total loss', 'Reconstruction loss', 'KLD', 'CA', 'DA']
 
     # Set up dataloader for training
     trainset   = Subset(dataset, dataset.trainval_idx)
@@ -74,16 +83,15 @@ def train_embeddings(model,
             print('Epoch {}/{}'.format(epoch, num_epochs))
 
         # Update coefficients
-        [beta] = update_coefficients(epoch, criterion['coefficients'])
+        [beta, gamma, delta] = update_coefficients(epoch, criterion['coefficients'])
         
         # Iterate through batches
         for (i_batch, (features, attributes, labels)) in enumerate(dataloader, start=1):
             start = time.time_ns()
 
             # Forward pass
-            [RL, KLD] = batch_loss(model, features, attributes, labels, criterion['function'])
-            
-            loss = RL + beta * KLD
+            [RL, KLD, CA, DA] = batch_loss(model, features, attributes, labels, criterion['function'])
+            loss = RL + beta * KLD + gamma * CA + delta * DA
 
             # Backward pass
             optimizer.zero_grad()
@@ -93,7 +101,7 @@ def train_embeddings(model,
             end = time.time_ns()
 
             # Update
-            epoch_loss += np.array([loss.item(), RL.item(), KLD.item()])
+            epoch_loss += np.array([loss.item(), RL.item(), KLD.item(), CA.item(), DA.item()])
             epoch_time += end-start
 
             if i_batch < len(dataloader):

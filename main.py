@@ -51,7 +51,9 @@ def main(opt):
                 'function': nn.L1Loss(reduction='sum'),
 
                 'coefficients': {
-                    'beta':  {'start': 1,  'stop': 10, 'value': 1},
+                    'beta':  {'start': 0,  'stop': 93, 'value': 0.25},
+                    'gamma':  {'start': 21,  'stop': 75, 'value': 2.37},
+                    'delta':  {'start': 6,  'stop': 22, 'value': 8.13},
                 }
             }
 
@@ -88,13 +90,15 @@ def main(opt):
         for param in model.classifier.parameters():
             param.requires_grad = False
 
-        optimizer = optim.Adam(model.parameters(), lr=0.0001)
+        optimizer = optim.Adam(model.parameters(), lr=0.00015, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=True)
 
         criterion = {
             'function': nn.L1Loss(reduction='sum'),
 
             'coefficients': {
-                'beta':  {'start': 1,  'stop': 10, 'value': 1},
+                'beta':  {'start': 0,  'stop': 93, 'value': 0.25},
+                'gamma':  {'start': 21,  'stop': 75, 'value': 2.37},
+                'delta':  {'start': 6,  'stop': 22, 'value': 8.13},
             }
         }
 
