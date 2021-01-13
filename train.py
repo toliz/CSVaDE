@@ -19,14 +19,9 @@ def batch_loss(model, cnn, att, labels, reconstruction_loss_function):
     cnn_from_att = model.cnn_decoder(z_att)
     att_from_cnn = model.att_decoder(z_cnn)
 
-    #mu     = model.mu[labels]
-    #logvar = model.logvar[labels]
-
-    # VaDE Loss
+    # CADA-VAE Loss
     reconstruction_loss = reconstruction_loss_function(cnn_from_cnn, cnn) + reconstruction_loss_function(att_from_att, att)
 
-    #KLD = -0.5 * (torch.sum(1 + (logvar_cnn - logvar) - ((mu_cnn - mu).pow(2) + logvar_cnn.exp()) / logvar.exp()) + \
-    #              torch.sum(1 + (logvar_att - logvar) - ((mu_att - mu).pow(2) + logvar_att.exp()) / logvar.exp()))
     KLD = -0.5 * (torch.sum(1 + logvar_att - mu_att.pow(2) - logvar_att.exp()) + \
                   torch.sum(1 + logvar_cnn - mu_cnn.pow(2) - logvar_cnn.exp()))
 
