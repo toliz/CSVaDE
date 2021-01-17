@@ -29,9 +29,10 @@ class Encoder(nn.Module):
 
         # Reparametrize
         std = torch.exp(logvar) # TODO: 0.5*logvar
-        eps = torch.FloatTensor(logvar.size()[0],1).normal_(0,1).to('cuda')
+        eps = torch.randn_like(logvar[0, :])
+        #eps = torch.FloatTensor(logvar.size()[0],1).normal_(0,1).to('cuda')
         eps  = eps.expand(std.size())
-        #eps = torch.randn_like(std) TODO: remove
+        #eps = torch.randn_like(std) #TODO: remove
 
         z = mu + eps*std
 
